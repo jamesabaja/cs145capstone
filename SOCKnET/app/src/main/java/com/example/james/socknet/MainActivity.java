@@ -1,9 +1,12 @@
 package com.example.james.socknet;
 
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -22,27 +25,39 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity {
     TextView tv_status, tv_time, tv_home;
     Button btn_check, btn_toggle, btn_home;
+    ImageButton ibtn_status, ibtn_home;
     Boolean isHome = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
         tv_status = findViewById(R.id.tv_status);
         tv_time = findViewById(R.id.tv_time);
         tv_home = findViewById(R.id.tv_home);
         btn_check = findViewById(R.id.btn_check);
         btn_toggle = findViewById(R.id.btn_toggle);
         btn_home = findViewById(R.id.btn_home);
+        ibtn_home = findViewById(R.id.ibtn_home);
+        ibtn_status = findViewById(R.id.ibtn_status);
+
+        ibtn_home.setClickable(false);
+        ibtn_status.setClickable(false);
 
         btn_home.setOnClickListener(new Button.OnClickListener() {
-            TextView tv_home = findViewById(R.id.tv_home);
             public void onClick(View v) {
                 if(isHome) {
                     isHome = false;
                     tv_home.setText("Not Home");
+                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                    grayscaleMatrix.setSaturation(0);
+
+                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                    ibtn_home.getBackground().setColorFilter(filter);
                 }else {
                     isHome = true;
                     tv_home.setText("Home");
+                    ibtn_home.getBackground().setColorFilter(null);
                 }
             }
         });
@@ -66,11 +81,22 @@ public class MainActivity extends AppCompatActivity {
                                     Boolean state = response.getBoolean("state");
                                     if(state) {
                                         tv_status.setText("Status: ON");
+                                        ibtn_home.getBackground().setColorFilter(null);
                                     }else {
                                         tv_status.setText("Status: OFF");
+                                        final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                        grayscaleMatrix.setSaturation(0);
+
+                                        final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                        ibtn_status.getBackground().setColorFilter(filter);
                                     }
                                 } catch (JSONException e) {
                                     tv_status.setText("Status: Server unavailable.");
+                                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                    grayscaleMatrix.setSaturation(0);
+
+                                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                    ibtn_status.getBackground().setColorFilter(filter);
                                 }
                             }
                         }, new Response.ErrorListener() {
@@ -78,6 +104,11 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onErrorResponse(VolleyError error) {
                                 tv_status.setText("Status: Server unavailable.");
+                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                grayscaleMatrix.setSaturation(0);
+
+                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                ibtn_status.getBackground().setColorFilter(filter);
 
                             }
                         });
@@ -110,11 +141,22 @@ public class MainActivity extends AppCompatActivity {
                                     Boolean state = response.getBoolean("state");
                                     if(state) {
                                         tv_status.setText("Status: ON");
+                                        ibtn_home.getBackground().setColorFilter(null);
                                     }else {
                                         tv_status.setText("Status: OFF");
+                                        final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                        grayscaleMatrix.setSaturation(0);
+
+                                        final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                        ibtn_status.getBackground().setColorFilter(filter);
                                     }
                                 } catch (JSONException e) {
                                     tv_status.setText("Status: Server unavailable.");
+                                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                    grayscaleMatrix.setSaturation(0);
+
+                                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                    ibtn_status.getBackground().setColorFilter(filter);
                                 }
                             }
                         }, new Response.ErrorListener() {
@@ -122,6 +164,11 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onErrorResponse(VolleyError error) {
                                 tv_status.setText("Status: Server unavailable.");
+                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                grayscaleMatrix.setSaturation(0);
+
+                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                ibtn_status.getBackground().setColorFilter(filter);
                             }
                         });
 
@@ -169,7 +216,5 @@ public class MainActivity extends AppCompatActivity {
                 tv_time.setText("Timestamp: " + currentTime.toString());
             }
         });
-
-        setContentView(R.layout.activity_main);
     }
 }
