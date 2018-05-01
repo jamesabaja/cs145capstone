@@ -2,6 +2,7 @@ package com.example.james.socknet;
 
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -19,11 +20,12 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    TextView tv_status, tv_time, tv_home;
+    TextView tv_status, tv_time;
     Button btn_check, btn_toggle, btn_home;
     ImageButton ibtn_status, ibtn_home;
     Boolean isHome = true;
@@ -34,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         tv_status = findViewById(R.id.tv_status);
         tv_time = findViewById(R.id.tv_time);
-        tv_home = findViewById(R.id.tv_home);
         btn_check = findViewById(R.id.btn_check);
         btn_toggle = findViewById(R.id.btn_toggle);
         btn_home = findViewById(R.id.btn_home);
@@ -48,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if(isHome) {
                     isHome = false;
-                    tv_home.setText("Not Home");
                     final ColorMatrix grayscaleMatrix = new ColorMatrix();
                     grayscaleMatrix.setSaturation(0);
 
@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
                     ibtn_home.getBackground().setColorFilter(filter);
                 }else {
                     isHome = true;
-                    tv_home.setText("Home");
                     ibtn_home.getBackground().setColorFilter(null);
                 }
             }
@@ -114,10 +113,11 @@ public class MainActivity extends AppCompatActivity {
                         });
 
                 // Add the request to the RequestQueue.
-                queue.add(jsonObjectRequest);
                 Date currentTime = Calendar.getInstance().getTime();
+                SimpleDateFormat format = new SimpleDateFormat("E, MMMM d, yyyy, h:mm:ss a");
 
-                tv_time.setText("Timestamp: " + currentTime.toString());
+                tv_time = findViewById(R.id.tv_time);
+                tv_time.setText("Timestamp: " + format.format(currentTime).toString());
             }
         });
 
@@ -211,10 +211,76 @@ public class MainActivity extends AppCompatActivity {
                 queue.add(jsonObjectRequestPOST);
 
                 Date currentTime = Calendar.getInstance().getTime();
+                SimpleDateFormat format = new SimpleDateFormat("E, MMMM d, yyyy, h:mm:ss a");
 
                 tv_time = findViewById(R.id.tv_time);
-                tv_time.setText("Timestamp: " + currentTime.toString());
+                tv_time.setText("Timestamp: " + format.format(currentTime).toString());
             }
         });
+        check();
+    }
+
+    public void check() {
+        if(isHome) {
+            // Instantiate the RequestQueue.
+            final RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
+            String url ="http://206.189.92.99/adaptor/get_state?name=adaptor1";
+
+            // Request a string response from the provided URL.
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                    (Request.Method.GET, url, (String) null, new Response.Listener<JSONObject>() {
+
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            try {
+                                Boolean state = response.getBoolean("state");
+                                if(state) {
+                                    tv_status.setText("Status: ON");
+                                    ibtn_home.getBackground().setColorFilter(null);
+                                }else {
+                                    tv_status.setText("Status: OFF");
+                                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                    grayscaleMatrix.setSaturation(0);
+
+                                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                    ibtn_status.getBackground().setColorFilter(filter);
+                                }
+                            } catch (JSONException e) {
+                                tv_status.setText("Status: Server unavailable.");
+                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                grayscaleMatrix.setSaturation(0);
+
+                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                ibtn_status.getBackground().setColorFilter(filter);
+                            }
+                        }
+                    }, new Response.ErrorListener() {
+
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            tv_status.setText("Status: Server unavailable.");
+                            final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                            grayscaleMatrix.setSaturation(0);
+
+                            final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                            ibtn_status.getBackground().setColorFilter(filter);
+
+                        }
+                    });
+
+            // Add the request to the RequestQueue.
+            queue.add(jsonObjectRequest);
+            Date currentTime = Calendar.getInstance().getTime();
+            SimpleDateFormat format = new SimpleDateFormat("E, MMMM d, yyyy, h:mm:ss a");
+
+            tv_time = findViewById(R.id.tv_time);
+            tv_time.setText("Timestamp: " + format.format(currentTime).toString());
+        }
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                check();
+            }
+        }, 10000);
     }
 }
