@@ -1,8 +1,18 @@
 package com.example.james.socknet;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Handler;
+import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -25,10 +35,12 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    TextView tv_status, tv_time;
-    Button btn_check, btn_toggle, btn_home;
+    TextView tv_status, tv_time, tv_coord;
+    Button btn_check, btn_toggle, btn_home, btn_coord;
     ImageButton ibtn_status, ibtn_home;
     Boolean isHome = true;
+    private LocationManager locationManager;
+    private LocationListener locationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,20 +53,59 @@ public class MainActivity extends AppCompatActivity {
         btn_home = findViewById(R.id.btn_home);
         ibtn_home = findViewById(R.id.ibtn_home);
         ibtn_status = findViewById(R.id.ibtn_status);
+        btn_coord = findViewById(R.id.btn_coord);
+        tv_coord = findViewById(R.id.tv_coord);
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
         ibtn_home.setClickable(false);
         ibtn_status.setClickable(false);
 
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                tv_coord.setText("Coordinates: \n" + location.getLatitude() + " " + location.getLongitude());
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
+        };
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.INTERNET
+                }, 10);
+                return;
+            }
+        } else {
+            configureButton();
+        }
+
+
         btn_home.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                if(isHome) {
+                if (isHome) {
                     isHome = false;
                     final ColorMatrix grayscaleMatrix = new ColorMatrix();
                     grayscaleMatrix.setSaturation(0);
 
                     final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
                     ibtn_home.getBackground().setColorFilter(filter);
-                }else {
+                } else {
                     isHome = true;
                     ibtn_home.getBackground().setColorFilter(null);
                 }
@@ -63,12 +114,13 @@ public class MainActivity extends AppCompatActivity {
 
         btn_check.setOnClickListener(new Button.OnClickListener() {
             String tv_value;
+
             public void onClick(View v) {
                 tv_value = tv_status.getText().toString();
 
                 // Instantiate the RequestQueue.
                 final RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
-                String url ="http://206.189.92.99/adaptor/get_state?name=adaptor1";
+                String url = "http://206.189.92.99/adaptor/get_state?name=adaptor1";
 
                 // Request a string response from the provided URL.
                 JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
@@ -78,10 +130,10 @@ public class MainActivity extends AppCompatActivity {
                             public void onResponse(JSONObject response) {
                                 try {
                                     Boolean state = response.getBoolean("state");
-                                    if(state) {
+                                    if (state) {
                                         tv_status.setText("Status: ON");
                                         ibtn_home.getBackground().setColorFilter(null);
-                                    }else {
+                                    } else {
                                         tv_status.setText("Status: OFF");
                                         final ColorMatrix grayscaleMatrix = new ColorMatrix();
                                         grayscaleMatrix.setSaturation(0);
@@ -123,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
 
         btn_toggle.setOnClickListener(new Button.OnClickListener() {
             String tv_value;
+
             public void onClick(View v) {
                 tv_value = tv_status.getText().toString();
 
@@ -139,10 +192,10 @@ public class MainActivity extends AppCompatActivity {
                             public void onResponse(JSONObject response) {
                                 try {
                                     Boolean state = response.getBoolean("state");
-                                    if(state) {
+                                    if (state) {
                                         tv_status.setText("Status: ON");
                                         ibtn_home.getBackground().setColorFilter(null);
-                                    }else {
+                                    } else {
                                         tv_status.setText("Status: OFF");
                                         final ColorMatrix grayscaleMatrix = new ColorMatrix();
                                         grayscaleMatrix.setSaturation(0);
@@ -176,9 +229,9 @@ public class MainActivity extends AppCompatActivity {
                 queue.add(jsonObjectRequest);
 
                 tv_value = tv_status.getText().toString();
-                if(tv_value.equals("Status: ON")) {
+                if (tv_value.equals("Status: ON")) {
                     url_post = "http://206.189.92.99/adaptor/power_off?name=adaptor1";
-                }else if(tv_value.equals("Status: OFF")) {
+                } else if (tv_value.equals("Status: OFF")) {
                     url_post = "http://206.189.92.99/adaptor/power_on?name=adaptor1";
                 }
 
@@ -190,9 +243,9 @@ public class MainActivity extends AppCompatActivity {
                             public void onResponse(JSONObject response) {
                                 try {
                                     Boolean state = response.getBoolean("state");
-                                    if(state) {
+                                    if (state) {
                                         tv_status.setText("Status: ON");
-                                    }else {
+                                    } else {
                                         tv_status.setText("Status: OFF");
                                     }
                                 } catch (JSONException e) {
@@ -218,6 +271,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         check();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case 10:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                    configureButton();
+                return;
+        }
+    }
+
+    private void configureButton() {
+        btn_coord.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                locationManager.requestLocationUpdates("gps", 10000, 0, locationListener);
+            }
+        });
     }
 
     public void check() {
