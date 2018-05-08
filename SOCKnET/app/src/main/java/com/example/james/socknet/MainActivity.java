@@ -1,6 +1,13 @@
 package com.example.james.socknet;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ColorMatrix;
@@ -8,10 +15,13 @@ import android.graphics.ColorMatrixColorFilter;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -35,12 +45,14 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    TextView tv_status, tv_time, tv_coord;
-    Button btn_check, btn_toggle, btn_home, btn_coord;
-    ImageButton ibtn_status, ibtn_home;
-    Boolean isHome = true;
+    private TextView tv_status, tv_time, tv_coord;
+    private Button btn_check, btn_toggle, btn_home, btn_coord;
+    private ImageButton ibtn_status, ibtn_home;
+    private Boolean isHome = true;
     private LocationManager locationManager;
     private LocationListener locationListener;
+    private boolean isOn = true;
+    private boolean hasNotified = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
                                     if (state) {
                                         tv_status.setText("Status: ON");
                                         ibtn_home.getBackground().setColorFilter(null);
+                                        isOn = true;
                                     } else {
                                         tv_status.setText("Status: OFF");
                                         final ColorMatrix grayscaleMatrix = new ColorMatrix();
@@ -140,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
 
                                         final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
                                         ibtn_status.getBackground().setColorFilter(filter);
+                                        isOn = false;
                                     }
                                 } catch (JSONException e) {
                                     tv_status.setText("Status: Server unavailable.");
@@ -194,7 +208,8 @@ public class MainActivity extends AppCompatActivity {
                                     Boolean state = response.getBoolean("state");
                                     if (state) {
                                         tv_status.setText("Status: ON");
-                                        ibtn_home.getBackground().setColorFilter(null);
+                                        ibtn_status.getBackground().setColorFilter(null);
+                                        isOn = true;
                                     } else {
                                         tv_status.setText("Status: OFF");
                                         final ColorMatrix grayscaleMatrix = new ColorMatrix();
@@ -202,6 +217,7 @@ public class MainActivity extends AppCompatActivity {
 
                                         final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
                                         ibtn_status.getBackground().setColorFilter(filter);
+                                        isOn = false;
                                     }
                                 } catch (JSONException e) {
                                     tv_status.setText("Status: Server unavailable.");
@@ -245,11 +261,24 @@ public class MainActivity extends AppCompatActivity {
                                     Boolean state = response.getBoolean("state");
                                     if (state) {
                                         tv_status.setText("Status: ON");
+                                        ibtn_status.getBackground().setColorFilter(null);
+                                        isOn = true;
                                     } else {
                                         tv_status.setText("Status: OFF");
+                                        final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                        grayscaleMatrix.setSaturation(0);
+
+                                        final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                        ibtn_status.getBackground().setColorFilter(filter);
+                                        isOn = false;
                                     }
                                 } catch (JSONException e) {
                                     tv_status.setText("Status: Server unavailable.");
+                                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                    grayscaleMatrix.setSaturation(0);
+
+                                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                    ibtn_status.getBackground().setColorFilter(filter);
                                 }
                             }
                         }, new Response.ErrorListener() {
@@ -257,6 +286,11 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onErrorResponse(VolleyError error) {
                                 tv_status.setText("Status: Server unavailable.");
+                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                grayscaleMatrix.setSaturation(0);
+
+                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                ibtn_status.getBackground().setColorFilter(filter);
                             }
                         });
 
@@ -285,15 +319,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void configureButton() {
         btn_coord.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("MissingPermission")
             @Override
             public void onClick(View v) {
-                locationManager.requestLocationUpdates("gps", 10000, 0, locationListener);
+                locationManager.requestLocationUpdates("gps", 5000, 0, locationListener);
             }
         });
     }
 
     public void check() {
-        if(isHome) {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+
+        if(netInfo != null && netInfo.getTypeName().equalsIgnoreCase("wifi")) {
+            hasNotified = false;
             // Instantiate the RequestQueue.
             final RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
             String url ="http://206.189.92.99/adaptor/get_state?name=adaptor1";
@@ -309,6 +348,7 @@ public class MainActivity extends AppCompatActivity {
                                 if(state) {
                                     tv_status.setText("Status: ON");
                                     ibtn_home.getBackground().setColorFilter(null);
+                                    isOn = true;
                                 }else {
                                     tv_status.setText("Status: OFF");
                                     final ColorMatrix grayscaleMatrix = new ColorMatrix();
@@ -316,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
 
                                     final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
                                     ibtn_status.getBackground().setColorFilter(filter);
+                                    isOn = false;
                                 }
                             } catch (JSONException e) {
                                 tv_status.setText("Status: Server unavailable.");
@@ -347,12 +388,43 @@ public class MainActivity extends AppCompatActivity {
 
             tv_time = findViewById(R.id.tv_time);
             tv_time.setText("Timestamp: " + format.format(currentTime).toString());
+        }else {
+            String curr_state = "";
+            if(isOn) {
+                curr_state = "ON";
+                if(!hasNotified) {
+                    String title = "SOCKnET";
+                    String subject = "SOCKnET";
+                    String body = "Your SOCKnET is currently on, and it seems that you are currently out of range. Connect to a network source immediately to turn off SOCKnET from the app.";
+                    NotificationManager notif=(NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+                    Intent intent = new Intent(MainActivity.this, MainActivity.class);
+                    TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+                    stackBuilder.addParentStack(MainActivity.class);
+
+                    // Adds the Intent that starts the Activity to the top of the stack
+                    stackBuilder.addNextIntent(intent);
+                    PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0,PendingIntent.FLAG_UPDATE_CURRENT);
+                    Notification notify=new Notification.Builder
+                            (getApplicationContext()).setContentTitle(title).setContentText(body).
+                            setContentTitle(subject).setSmallIcon(R.drawable.light_bulb_icon)
+                            .setStyle(new Notification.BigTextStyle().bigText(body)).setContentIntent(resultPendingIntent)
+                            .build();
+
+                    notify.flags |= Notification.FLAG_AUTO_CANCEL;
+                    notif.notify(0, notify);
+
+                    hasNotified = true;
+                }
+            }else {
+                curr_state = "OFF";
+            }
+            tv_coord.setText("Last known state of adaptor: " + curr_state);
         }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 check();
             }
-        }, 10000);
+        }, 5000);
     }
 }
