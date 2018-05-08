@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
                     PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
                     Notification notify = new Notification.Builder
                             (getApplicationContext()).setContentTitle(title).setContentText(body).
-                            setContentTitle(subject).setSmallIcon(R.drawable.light_bulb_icon)
+                            setContentTitle(subject).setSmallIcon(R.mipmap.socknet_logo)
                             .setStyle(new Notification.BigTextStyle().bigText(body)).setContentIntent(resultPendingIntent)
                             .build();
 
