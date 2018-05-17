@@ -6,13 +6,16 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -31,6 +34,7 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import android.os.Vibrator;
 
 public class MainActivity extends AppCompatActivity {
     private TextView tv_status;
@@ -43,11 +47,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
         tv_status = findViewById(R.id.tv_status);
         btn_check = findViewById(R.id.btn_check);
         btn_toggle = findViewById(R.id.btn_toggle);
         ibtn_status = findViewById(R.id.ibtn_status);
         ibtn_status.setClickable(false);
+        NotificationManager notify = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notify.cancelAll();
 
         btn_check.setOnClickListener(new Button.OnClickListener() {
             String tv_value;
@@ -167,8 +175,17 @@ public class MainActivity extends AppCompatActivity {
 
                 Date currentTime = Calendar.getInstance().getTime();
                 SimpleDateFormat format = new SimpleDateFormat("E, MMMM d, yyyy, h:mm:ss a");
+
+                // Get instance of Vibrator from current Context
+                Vibrator vi = (Vibrator) getSystemService(MainActivity.this.VIBRATOR_SERVICE);
+
+                // Vibrate for 400 milliseconds
+                vi.vibrate(400);
             }
         });
+        if(isOn) {
+            tv_status.setText("Status: ON");
+        }
         check();
     }
 
@@ -204,24 +221,34 @@ public class MainActivity extends AppCompatActivity {
                                     isOn = false;
                                 }
                             } catch (JSONException e) {
-                                tv_status.setText("Status: Server unavailable.");
-                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
-                                grayscaleMatrix.setSaturation(0);
+                                if(isOn) {
+                                    tv_status.setText("Status: ON");
+                                    ibtn_status.getBackground().setColorFilter(null);
+                                }else {
+                                    tv_status.setText("Status: OFF");
+                                    final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                    grayscaleMatrix.setSaturation(0);
 
-                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
-                                ibtn_status.getBackground().setColorFilter(filter);
+                                    final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                    ibtn_status.getBackground().setColorFilter(filter);
+                                }
                             }
                         }
                     }, new Response.ErrorListener() {
 
                         @Override
                         public void onErrorResponse(VolleyError error) {
-                            tv_status.setText("Status: Server unavailable.");
-                            final ColorMatrix grayscaleMatrix = new ColorMatrix();
-                            grayscaleMatrix.setSaturation(0);
+                            if(isOn) {
+                                tv_status.setText("Status: ON");
+                                ibtn_status.getBackground().setColorFilter(null);
+                            }else {
+                                tv_status.setText("Status: OFF");
+                                final ColorMatrix grayscaleMatrix = new ColorMatrix();
+                                grayscaleMatrix.setSaturation(0);
 
-                            final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
-                            ibtn_status.getBackground().setColorFilter(filter);
+                                final ColorMatrixColorFilter filter = new ColorMatrixColorFilter(grayscaleMatrix);
+                                ibtn_status.getBackground().setColorFilter(filter);
+                            }
 
                         }
                     });
@@ -244,12 +271,15 @@ public class MainActivity extends AppCompatActivity {
                     PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
                     Notification notify = new Notification.Builder
                             (getApplicationContext()).setContentTitle(title).setContentText(body).
-                            setContentTitle(subject).setSmallIcon(R.mipmap.socknet_logo)
+                            setContentTitle(subject).setSmallIcon(R.drawable.socknet_logo)
+                            .setLargeIcon(BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                                    R.drawable.socknet_logo_small))
+                            .setAutoCancel(true)
                             .setStyle(new Notification.BigTextStyle().bigText(body)).setContentIntent(resultPendingIntent)
                             .build();
 
-                    notify.flags |= Notification.FLAG_AUTO_CANCEL;
-                    notif.notify(0, notify);
+                    notify.flags = Notification.FLAG_AUTO_CANCEL;
+                    notif.notify(1, notify);
 
                     hasNotified = true;
                 }
